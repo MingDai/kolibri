@@ -46,7 +46,7 @@
   module.exports = {
     $trNameSpace: 'learnExplore',
     $trs: {
-      explore: 'Explore is Great',
+      explore: 'Explore',
       navigate: 'You can navigate groups of content through headings.',
     },
     components: {
@@ -58,7 +58,7 @@
     },
     computed: {
       title() {
-        return this.isRoot ? this.$tr('explore') : this.topic.title;
+        return this.isRoot ? this.$tr('navigate') : this.topic.title;
       },
     },
     vuex: {
