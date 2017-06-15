@@ -58,7 +58,7 @@
     },
     computed: {
       title() {
-        return this.isRoot ? this.$tr('explore') : this.topic.title;
+        return this.isRoot ? this.$tr('navigate') : this.topic.title;
       },
     },
     vuex: {
