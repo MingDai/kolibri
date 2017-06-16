@@ -1,14 +1,40 @@
+from django.db.models.query import F
 from kolibri.auth.api import KolibriAuthPermissions, KolibriAuthPermissionsFilter
+from kolibri.auth.filters import HierarchyRelationsFilter
+from kolibri.auth.models import FacilityUser
 from kolibri.content.api import OptionalPageNumberPagination
 from rest_framework import filters, viewsets
 
-from .models import AttemptLog, ContentRatingLog, ContentSessionLog, ContentSummaryLog, MasteryLog, UserSessionLog
+from .models import AttemptLog, ContentSessionLog, ContentSummaryLog, ExamAttemptLog, ExamLog, MasteryLog, UserSessionLog
 from .serializers import (
-    AttemptLogSerializer, ContentRatingLogSerializer, ContentSessionLogSerializer, ContentSummaryLogSerializer, MasteryLogSerializer, UserSessionLogSerializer
+    AttemptLogSerializer, ContentSessionLogSerializer, ContentSummaryLogSerializer, ExamAttemptLogSerializer, ExamLogSerializer,
+    MasteryLogSerializer, TotalContentProgressSerializer, UserSessionLogSerializer
 )
 
 
-class ContentSessionLogFilter(filters.FilterSet):
+class BaseLogFilter(filters.FilterSet):
+    facility = filters.django_filters.MethodFilter()
+    classroom = filters.django_filters.MethodFilter()
+    learner_group = filters.django_filters.MethodFilter()
+
+    # Only device owner (superuser) can filter by facilities
+    def filter_facility(self, queryset, value):
+        return queryset.filter(user__facility_id=value)
+
+    def filter_classroom(self, queryset, value):
+        return HierarchyRelationsFilter(queryset).filter_by_hierarchy(
+            ancestor_collection=value,
+            target_user=F("user"),
+        )
+
+    def filter_learner_group(self, queryset, value):
+        return HierarchyRelationsFilter(queryset).filter_by_hierarchy(
+            ancestor_collection=value,
+            target_user=F("user"),
+        )
+
+
+class ContentSessionLogFilter(BaseLogFilter):
 
     class Meta:
         model = ContentSessionLog
@@ -24,7 +50,7 @@ class ContentSessionLogViewSet(viewsets.ModelViewSet):
     filter_class = ContentSessionLogFilter
 
 
-class ContentSummaryFilter(filters.FilterSet):
+class ContentSummaryLogFilter(BaseLogFilter):
 
     class Meta:
         model = ContentSummaryLog
@@ -37,22 +63,31 @@ class ContentSummaryLogViewSet(viewsets.ModelViewSet):
     queryset = ContentSummaryLog.objects.all()
     serializer_class = ContentSummaryLogSerializer
     pagination_class = OptionalPageNumberPagination
-    filter_class = ContentSummaryFilter
+    filter_class = ContentSummaryLogFilter
 
 
-class ContentRatingLogViewSet(viewsets.ModelViewSet):
+class TotalContentProgressViewSet(viewsets.ModelViewSet):
     permission_classes = (KolibriAuthPermissions,)
     filter_backends = (KolibriAuthPermissionsFilter,)
-    queryset = ContentRatingLog.objects.all()
-    serializer_class = ContentRatingLogSerializer
-    pagination_class = OptionalPageNumberPagination
+    queryset = FacilityUser.objects.all()
+    serializer_class = TotalContentProgressSerializer
+
+
+class UserSessionLogFilter(BaseLogFilter):
+
+    class Meta:
+        model = UserSessionLog
+        fields = ['user_id']
+
 
 class UserSessionLogViewSet(viewsets.ModelViewSet):
     permission_classes = (KolibriAuthPermissions,)
-    filter_backends = (KolibriAuthPermissionsFilter,)
+    filter_backends = (KolibriAuthPermissionsFilter, filters.DjangoFilterBackend)
     queryset = UserSessionLog.objects.all()
     serializer_class = UserSessionLogSerializer
     pagination_class = OptionalPageNumberPagination
+    filter_class = UserSessionLogFilter
+
 
 class MasteryFilter(filters.FilterSet):
 
@@ -69,10 +104,14 @@ class MasteryLogViewSet(viewsets.ModelViewSet):
     filter_class = MasteryFilter
 
 class AttemptFilter(filters.FilterSet):
+    content = filters.django_filters.MethodFilter()
+
+    def filter_content(self, queryset, value):
+        return queryset.filter(masterylog__summarylog__content_id=value)
 
     class Meta:
         model = AttemptLog
-        fields = ['masterylog', 'complete']
+        fields = ['masterylog', 'complete', 'user', 'content']
 
 class AttemptLogViewSet(viewsets.ModelViewSet):
     permission_classes = (KolibriAuthPermissions,)
@@ -83,3 +122,48 @@ class AttemptLogViewSet(viewsets.ModelViewSet):
     filter_class = AttemptFilter
     ordering_fields = ('end_timestamp',)
     ordering = ('end_timestamp',)
+
+
+class ExamAttemptFilter(filters.FilterSet):
+    exam = filters.django_filters.MethodFilter()
+    user = filters.django_filters.MethodFilter()
+
+    def filter_exam(self, queryset, value):
+        return queryset.filter(examlog__exam=value)
+
+    def filter_user(self, queryset, value):
+        return queryset.filter(examlog__user=value)
+
+    class Meta:
+        model = ExamAttemptLog
+        fields = ['examlog', 'exam', 'user']
+
+class ExamAttemptLogViewSet(viewsets.ModelViewSet):
+    permission_classes = (KolibriAuthPermissions,)
+    filter_backends = (KolibriAuthPermissionsFilter, filters.DjangoFilterBackend, filters.OrderingFilter)
+    queryset = ExamAttemptLog.objects.all()
+    serializer_class = ExamAttemptLogSerializer
+    pagination_class = OptionalPageNumberPagination
+    filter_class = ExamAttemptFilter
+
+class ExamLogFilter(BaseLogFilter):
+
+    collection = filters.django_filters.MethodFilter()
+
+    def filter_collection(self, queryset, collection_id):
+        return HierarchyRelationsFilter(queryset).filter_by_hierarchy(
+            target_user=F('user'),
+            ancestor_collection=collection_id,
+        )
+
+    class Meta:
+        model = ExamLog
+        fields = ['user', 'exam']
+
+class ExamLogViewSet(viewsets.ModelViewSet):
+    permission_classes = (KolibriAuthPermissions,)
+    filter_backends = (KolibriAuthPermissionsFilter, filters.DjangoFilterBackend)
+    queryset = ExamLog.objects.all()
+    serializer_class = ExamLogSerializer
+    pagination_class = OptionalPageNumberPagination
+    filter_class = ExamLogFilter

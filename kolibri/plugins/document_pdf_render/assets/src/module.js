@@ -1,13 +1,10 @@
 
 const ContentRendererModule = require('content_renderer_module');
-const PDFComponent = require('./vue/index');
+const PDFComponent = require('./views/index');
 
 class DocumentPDFModule extends ContentRendererModule {
   get rendererComponent() {
     return PDFComponent;
-  }
-  get contentType() {
-    return 'document/pdf';
   }
 }
 

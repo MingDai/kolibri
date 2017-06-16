@@ -3,39 +3,130 @@
 Release Notes
 =============
 
-All notable changes to this project will be documented in this file.
-This project adheres to `Semantic Versioning <http://semver.org/>`_.
+Changes are ordered reverse-chronologically.
 
-*Don’t let your friends dump git logs into CHANGELOGs™*
+0.5
+---
 
-`http://keepachangelog.com/ <http://keepachangelog.com/>`_
+ - Update all user logging related timestamps to a custom datetime field that includes timezone info
+ - Added daemon mode (system service) to run ``kolibri start`` in background (default!) #1548
+ - Implemented ``kolibri stop`` and ``kolibri status`` #1548
+ - Newly imported channels are given a 'last_updated' timestamp
+ - Add progress annotation for topics, lazily loaded to increase page load performance
+ - Add API endpoint for getting number and total size of files in a channel
 
-[0.0.1] - UNRELEASED
---------------------
 
-.. note ::
-    Please add new stuff chronologically, we should try chunking up the
-    list into components at some point
+0.4
+---
 
-Added
-^^^^^
+ - Class and group management
+ - Learner reports #1464
+ - Performance optimizations #1499
+ - Anonymous exercises fixed #1466
+ - Integrated Morango, to prep for data syncing (will require fresh database)
 
- - Begin development of core auth app.
- - Add core user types (BaseUser, FacilityUser, DeviceOwner)
- - Add Collections and Roles, implemented using a special tree structure for efficient querying
- - Add authentication & authorization backends
- - Implement permissions for FacilityUsers by checking hierarchy relationships
- - Adds pipelining and integration for building frontend assets with webpack and dynamically serving them in Django.
- - Updates to  - Users, Collections, and Roles, mostly to account for multiple facilities in one database
- - Plugin API with hooks, documented and implemented
- - Adds Django JS Reverse and loads into kolibriGlobal object
- - Creates kolibri.auth API endpoint filtering
- - Adds management plugin for managing learners, classrooms, and groups
+
+0.3.0
+-----
+
+ - Add support for nested URL structures in API Resource layer
+ - Add Spanish and Swahili translations
+ - Improve pipeline for translating plugins
+ - Add search back in
+ - Content Renderers use explicit new API rather than event-based loading
+
+
+0.2.0
+-----
+
+ - Add authentication for tasks API
+ - Temporarily remove 'search' functionality
+ - Rename 'Learn/Explore' to 'Recommended/Topics'
+ - Add JS-based 'responsive mixin' as alternative to media queries
+ - Replace jeet grids with pure.css grids
+ - Begin using some keen-ui components
+ - Update primary layout and navigation
+ - New log-in page
+ - User sign-up and profile-editing functionality
+ - Versioning based on git tags
+ - Client heartbeat for usage tracking
+ - Allow plugins to override core components
+ - Wrap all user-facing strings for I18N
+ - Log filtering based on users and collections
+ - Improved docs
+ - Pin dependencies with Yarn
+ - ES2015 transpilation now Bublé instead of Babel
+ - Webpack build process compatible with plugins outside the kolibri directory
+ - Vue2 refactor
+ - HTML5 app renderer
+
+
+0.1.1
+-----
+
+ - SVG inlining
+ - Exercise completion visualization
+ - Perseus exercise renderer
+ - Coach reports
+
+
+0.1.0 - MVP
+-----------
+
+ - Improved documentation
+ - Conditional (cancelable) JS promises
+ - Asset bundling performance improvements
+ - Endpoint indexing into zip files
+ - Case-insensitive usernames
+ - Make plugins more self-contained
+ - Client-side router bug fixes
+ - Resource layer smart cache busting
+ - Loading 'spinner'
+ - Make modals accessible
+ - Fuzzy searching
+ - Usage data export
+ - Drive enumeration
+ - Content interaction logging
+ - I18N string extraction
+ - Channel switching bug fixes
+ - Modal popups
+ - A11Y updates
+ - Tab focus highlights
+ - Learn app styling changes
+ - User management UI
+ - Task management
+ - Content import/export
+ - Session state and login widget
+ - Channel switching
+ - Setup wizard plugin
+ - Documentation updates
+ - Content downloading
+
+
+0.0.1 - MMVP
+------------
+
+ - Page titles
+ - Javascript logging module
+ - Responsiveness updates
+ - A11Y updates
+ - Cherrypy server
+ - Vuex integration
+ - Stylus/Jeet-based grids
+ - Support for multiple content DBs
+ - API resource retrieval and caching
+ - Content recommendation endpoints
+ - Client-side routing
+ - Content search
+ - Video, Document, and MP3 content renderers
+ - Initial VueIntl integration
+ - User management API
+ - Vue.js integration
+ - Learn app and content browsing
+ - Content endpoints
  - Automatic inclusion of requirements in a static build
- - Linting of client-side assets during webpack build process
-
-Changed
-^^^^^^^
-
- - Webpack build process now compatible with plugins housed outside the kolibri directory.
- - ES2015 transpilation now uses Bublé instead of Babel.
+ - Django JS Reverse with urls representation in kolibriGlobal object
+ - Python plugin API with hooks
+ - Webpack build pipeline, including linting
+ - Authentication, authorization, permissions
+ - Users, Collections, and Roles

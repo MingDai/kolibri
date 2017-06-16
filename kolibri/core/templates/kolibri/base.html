@@ -1,4 +1,4 @@
-{% load i18n kolibri_tags webpack_tags js_reverse cache %}
+{% load i18n kolibri_tags webpack_tags content_tags js_reverse cache %}
 {% load staticfiles %}
 {% get_current_language as LANGUAGE_CODE %}
 <!DOCTYPE html>
@@ -50,7 +50,10 @@
   // Set global language variable.
   var languageCode = "{{ LANGUAGE_CODE }}";
 </script>
-{% webpack_asset 'default_frontend' %}
+{% cache 5000 default_frontend %}
+  {% webpack_asset 'default_frontend' %}
+{% endcache %}
+{% kolibri_set_server_time %}
 <script type="text/javascript">
   {% cache 5000 js_urls %}
     {% js_reverse_inline %}
@@ -58,8 +61,11 @@
 </script>
 <!-- Bootstrapping the currently logged in user's session object into the page. -->
 {% kolibri_bootstrap_model 'session' 'SessionResource' kwargs_pk='current'%}
-{% webpack_base_assets %}
-{% webpack_base_async_assets %}
+{% cache 5000 base_assets %}
+  {% webpack_base_assets %}
+  {% webpack_base_async_assets %}
+  {% content_renderer_assets %}
+{% endcache %}
 {% endblock %}
 
 {% block content %}

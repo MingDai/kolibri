@@ -49,8 +49,9 @@ config['INSTALLED_APPS'] = [
     "kolibri.plugins.video_mp4_render",
     "kolibri.plugins.audio_mp3_render",
     "kolibri.plugins.setup_wizard",
-    "kolibri.plugins.coach_tools",
-    "exercise_perseus_renderer"
+    "kolibri.plugins.coach",
+    "kolibri.plugins.user",
+    "kolibri_exercise_perseus_plugin"
 ]
 
 #: Well-known plugin names that are automatically searched for and enabled on

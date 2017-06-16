@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Django settings for kolibri project.
 
@@ -16,8 +17,11 @@ import platform
 
 # import kolibri, so we can get the path to the module.
 import kolibri
+# we load other utilities related to i18n
 # This is essential! We load the kolibri conf INSIDE the Django conf
-from kolibri.utils import conf
+from kolibri.utils import conf, i18n
+
+from tzlocal import get_localzone
 
 KOLIBRI_MODULE_PATH = os.path.dirname(kolibri.__file__)
 
@@ -42,7 +46,6 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -59,10 +62,20 @@ INSTALLED_APPS = [
     'kolibri.tasks.apps.KolibriTasksConfig',
     'django_q',
     'kolibri.core.webpack',
+    'kolibri.core.exams',
     'kolibri.core.discovery',
     'rest_framework',
     'django_js_reverse',
+    'jsonfield',
+    'morango',
 ] + conf.config['INSTALLED_APPS']
+
+# Add in the external plugins' locale paths. Our frontend messages depends
+# specifically on the value of LOCALE_PATHS to find its catalog files.
+LOCALE_PATHS += [
+    i18n.get_installed_app_locale_path(app) for app in INSTALLED_APPS
+    if i18n.is_external_plugin(app)
+]
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -106,6 +119,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(KOLIBRI_HOME, 'db.sqlite3'),
+        'OPTIONS': {
+            'timeout': 100,
+        }
     },
     'ormq': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -134,13 +150,21 @@ if not os.path.exists(CONTENT_STORAGE_DIR):
 # Base default URL for downloading content from an online server
 CENTRAL_CONTENT_DOWNLOAD_BASE_URL = "https://contentworkshop.learningequality.org"
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGES = [
+    ('en', 'English'),
+    ('sw-tz', 'Kiswahili'),
+    ('es-es', 'Español'),
+    ('fr-fr', 'Français, langue française'),
+    ('pt-pt', 'Português'),
+    ('hi-in', 'हिंदी')
+]
 
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = conf.config.get("LANGUAGE_CODE") or "en-us"
+
+TIME_ZONE = get_localzone().zone
 
 USE_I18N = True
 
@@ -176,13 +200,11 @@ Q_CLUSTER = {
     "sync": platform.system() == "Windows",
 }
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(KOLIBRI_HOME, "static")
-
 
 # https://docs.djangoproject.com/en/1.9/ref/settings/#std:setting-LOGGING
 # https://docs.djangoproject.com/en/1.9/topics/logging/
@@ -284,11 +306,9 @@ REST_FRAMEWORK = {
     ),
 }
 
-
 # System warnings to disable
 # see https://docs.djangoproject.com/en/1.9/ref/settings/#silenced-system-checks
 SILENCED_SYSTEM_CHECKS = ["auth.W004"]
-
 
 # Configuration for Django JS Reverse
 # https://github.com/ierror/django-js-reverse#options
@@ -298,3 +318,5 @@ JS_REVERSE_JS_VAR_NAME = 'urls'
 JS_REVERSE_JS_GLOBAL_OBJECT_NAME = KOLIBRI_CORE_JS_NAME
 
 JS_REVERSE_EXCLUDE_NAMESPACES = ['admin', ]
+
+ENABLE_DATA_BOOTSTRAPPING = True

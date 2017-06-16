@@ -16,6 +16,8 @@ const errorCode = require('rest/interceptor/errorCode');
 const cookiejs = require('js-cookie');
 const constructorExport = require('./constructorExport');
 const logging = require('../logging');
+const HeartBeat = require('../heartbeat');
+const importIntlLocale = require('./import-intl-locale');
 
 
 /**
@@ -32,7 +34,8 @@ const publicMethods = [
   'once',
   'off',
   'registerLanguageAssets',
-  'registerLanguageAssetsUrl',
+  'registerContentRenderer',
+  'retrieveContentRenderer',
 ];
 
 /**
@@ -57,20 +60,6 @@ module.exports = class CoreApp {
      */
     vue.use(vuex);
     vue.use(router);
-
-    // Register global components
-    vue.component('content-renderer', require('../vue/content-renderer'));
-    vue.component('assessment-wrapper', require('../vue/assessment-wrapper'));
-    vue.component('exercise-attempts', require('../vue/exercise-attempts'));
-    vue.component('download-button', require('../vue/content-renderer/download-button'));
-    vue.component('loading-spinner', require('../vue/loading-spinner'));
-    vue.component('core-modal', require('../vue/core-modal'));
-    vue.component('progress-bar', require('../vue/progress-bar'));
-    vue.component('icon-button', require('../vue/icon-button'));
-    vue.component('channel-switcher', require('../vue/channel-switcher'));
-    vue.component('content-icon', require('../vue/content-icon'));
-    vue.component('progress-icon', require('../vue/progress-icon'));
-    vue.component('core-base', require('../vue/core-base'));
 
     this.i18n = {
       reversed: false,
@@ -126,6 +115,7 @@ module.exports = class CoreApp {
         }
       }
 
+      mediator.registerMessages();
       mediator.setReady();
     }
 
@@ -133,20 +123,23 @@ module.exports = class CoreApp {
      * If the browser doesn't support the Intl polyfill, we retrieve that and
      * the modules need to wait until that happens.
      **/
-    if (!global.hasOwnProperty('Intl')) {
-      require.ensure(
-        [
-          'intl',
-          'intl/locale-data/jsonp/en.js',
-          // add more locales here
-        ],
-        (require) => {
-          require('intl');
-          require('intl/locale-data/jsonp/en.js');
-
+    if (!Object.prototype.hasOwnProperty.call(global, 'Intl')) {
+      Promise.all([(new Promise((resolve) => {
+        require.ensure([], (require) => {
+          resolve(() => require('intl'));
+        });
+      })), importIntlLocale(global.languageCode)]).then( // eslint-disable-line
+        (requires) => {
+          // Executes function that requires 'intl'
+          requires[0]();
+          // Executes function that requires intl locale data - needs intl to have run
+          requires[1]();
           setUpVueIntl();
-        }
-      );
+        },
+        (error) => {
+          logging.error(error);
+          logging.error('An error occurred trying to setup Internationalization', error);
+        });
     } else {
       setUpVueIntl();
     }
@@ -156,10 +149,21 @@ module.exports = class CoreApp {
     publicMethods.forEach((method) => {
       this[method] = mediator[method].bind(mediator);
     });
+    this.heartBeat = new HeartBeat(this);
   }
 
   get client() {
-    return rest.wrap(mime, { mime: 'application/json' }).wrap(csrf, { name: 'X-CSRFToken',
-        token: cookiejs.get('csrftoken') }).wrap(errorCode);
+    return (options) => {
+      if ((options && typeof options === 'object' && !Array.isArray(options)) &&
+        (!options.method || options.method === 'GET')) {
+        if (!options.params) {
+          options.params = {};
+        }
+        const cacheBust = new Date().getTime();
+        options.params[cacheBust] = cacheBust;
+      }
+      return rest.wrap(mime, { mime: 'application/json' }).wrap(csrf, { name: 'X-CSRFToken',
+        token: cookiejs.get('csrftoken') }).wrap(errorCode)(options);
+    };
   }
 };
