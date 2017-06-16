@@ -19,13 +19,14 @@ Including another URLconf
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
-from django.core.urlresolvers import reverse_lazy
-from django.views.generic import RedirectView
+
+from .views import RootURLRedirectView
 
 urlpatterns = [
-    url(r'^$', RedirectView.as_view(url=reverse_lazy('kolibri:learnplugin:learn'))),
+    url(r'^$', RootURLRedirectView.as_view()),
     url(r'^admin/', include(admin.site.urls)),
     url(r'', include('kolibri.core.urls')),
     url(r'', include('kolibri.content.urls')),
@@ -33,5 +34,13 @@ urlpatterns = [
     url(r'^api/', include('kolibri.content.api_urls')),
     url(r'^api/', include('kolibri.logger.api_urls')),
     url(r'^api/', include('kolibri.tasks.api_urls')),
+    url(r'^api/', include('kolibri.core.exams.api_urls')),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]
+
+if getattr(settings, 'DEBUG_PANEL_ACTIVE', False):
+
+    import debug_toolbar
+    urlpatterns = [
+        url(r'^__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns

@@ -2,12 +2,17 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from django.contrib.auth import authenticate, get_user, login, logout
 from django.contrib.auth.models import AnonymousUser
+from django.db.models.query import F
+from kolibri.logger.models import UserSessionLog
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.response import Response
 
-from .models import Classroom, DeviceOwner, Facility, FacilityUser, LearnerGroup, Membership, Role
+from .constants import collection_kinds
+from .filters import HierarchyRelationsFilter
+from .models import Classroom, DeviceOwner, Facility, FacilityDataset, FacilityUser, LearnerGroup, Membership, Role
 from .serializers import (
-    ClassroomSerializer, DeviceOwnerSerializer, FacilitySerializer, FacilityUserSerializer, LearnerGroupSerializer, MembershipSerializer, RoleSerializer
+    ClassroomSerializer, DeviceOwnerSerializer, FacilityDatasetSerializer, FacilitySerializer, FacilityUserSerializer, LearnerGroupSerializer,
+    MembershipSerializer, RoleSerializer
 )
 
 
@@ -63,11 +68,39 @@ class KolibriAuthPermissions(permissions.BasePermission):
             return False
 
 
+class FacilityDatasetViewSet(viewsets.ModelViewSet):
+    permissions_classes = (KolibriAuthPermissions,)
+    filter_backends = (KolibriAuthPermissionsFilter,)
+    serializer_class = FacilityDatasetSerializer
+
+    def get_queryset(self):
+        queryset = FacilityDataset.objects.filter(collection__kind=collection_kinds.FACILITY)
+        facility_id = self.request.query_params.get('facility_id', None)
+        if facility_id is not None:
+            queryset = queryset.filter(collection__id=facility_id)
+        return queryset
+
+
+class FacilityUserFilter(filters.FilterSet):
+
+    member_of = filters.django_filters.MethodFilter()
+
+    def filter_member_of(self, queryset, value):
+        return HierarchyRelationsFilter(queryset).filter_by_hierarchy(
+            target_user=F("id"),
+            ancestor_collection=value,
+        )
+
+    class Meta:
+        model = FacilityUser
+
+
 class FacilityUserViewSet(viewsets.ModelViewSet):
     permission_classes = (KolibriAuthPermissions,)
-    filter_backends = (KolibriAuthPermissionsFilter,)
+    filter_backends = (KolibriAuthPermissionsFilter, filters.DjangoFilterBackend)
     queryset = FacilityUser.objects.all()
     serializer_class = FacilityUserSerializer
+    filter_class = FacilityUserFilter
 
 
 class DeviceOwnerViewSet(viewsets.ModelViewSet):
@@ -79,9 +112,10 @@ class DeviceOwnerViewSet(viewsets.ModelViewSet):
 
 class MembershipViewSet(viewsets.ModelViewSet):
     permission_classes = (KolibriAuthPermissions,)
-    filter_backends = (KolibriAuthPermissionsFilter,)
+    filter_backends = (KolibriAuthPermissionsFilter, filters.DjangoFilterBackend)
     queryset = Membership.objects.all()
     serializer_class = MembershipSerializer
+    filter_fields = ('user_id', 'collection_id')
 
 
 class RoleViewSet(viewsets.ModelViewSet):
@@ -123,6 +157,33 @@ class LearnerGroupViewSet(viewsets.ModelViewSet):
     serializer_class = LearnerGroupSerializer
 
     filter_fields = ('parent',)
+
+
+class SignUpViewSet(viewsets.ViewSet):
+
+    def extract_request_data(self, request):
+        return {
+            "username": request.data.get('username', ''),
+            "full_name": request.data.get('full_name', ''),
+            "password": request.data.get('password', ''),
+            "facility": Facility.get_default_facility().id,
+        }
+
+    def create(self, request):
+
+        data = self.extract_request_data(request)
+
+        # we validate the user's input, and if valid, login as user
+        serialized_user = FacilityUserSerializer(data=data)
+        if serialized_user.is_valid():
+            serialized_user.save()
+            authenticated_user = authenticate(username=data['username'], password=data['password'], facility=data['facility'])
+            login(request, authenticated_user)
+            return Response(serialized_user.data, status=status.HTTP_201_CREATED)
+        else:
+            # grab error if related to username
+            error = serialized_user.errors.get('username', None)
+            return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SessionViewSet(viewsets.ViewSet):
@@ -183,4 +244,7 @@ class SessionViewSet(viewsets.ViewSet):
                 session.update({'facility_id': user.facility_id,
                                 'kind': ['learner'],
                                 'error': '200'})
+
+            UserSessionLog.update_log(user)
+
             return session

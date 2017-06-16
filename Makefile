@@ -1,3 +1,5 @@
+REQUIREMENTS=requirements.txt
+
 .PHONY: help clean clean-pyc clean-build list test test-all coverage docs release sdist
 
 help:
@@ -24,7 +26,8 @@ clean-build:
 	rm -fr *.egg-info
 	rm -fr .eggs
 	rm -fr .cache
-	git clean -X -d -f kolibri/dist
+	rm -r kolibri/dist/* || true # remove everything
+	git checkout -- kolibri/dist # restore __init__.py
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
@@ -48,6 +51,7 @@ test-all:
 	tox
 
 assets: staticdeps
+	yarn install
 	yarn run build
 
 coverage:
@@ -63,14 +67,20 @@ release: clean assets
 	python setup.py bdist_wheel upload
 
 staticdeps: clean
-	DISABLE_SQLALCHEMY_CEXT=1 pip install -t kolibri/dist/ -r requirements.txt
+	pip install -t kolibri/dist -r $(REQUIREMENTS)
+	rm -r kolibri/dist/*.dist-info  # pip installs from PyPI will complain if we have more than one dist-info directory.
 
-dist: staticdeps assets compilemessages
+writeversion:
+	git describe --tags > kolibri/VERSION
+
+dist: writeversion staticdeps assets compilemessages
 	pip install -r requirements/build.txt
 	python setup.py sdist --format=gztar,zip --static > /dev/null # silence the sdist output! Too noisy!
 	python setup.py bdist_wheel --static
-	pex . --disable-cache -o dist/`python setup.py --fullname`.pex -m kolibri --python-shebang=/usr/bin/python
 	ls -l dist
+
+pex:
+	ls dist/*.whl | while read whlfile; do pex $$whlfile --disable-cache -o dist/kolibri-`unzip -p $$whlfile kolibri/VERSION`.pex -m kolibri --python-shebang=/usr/bin/python; done
 
 makedocsmessages:
 	make -C docs/ gettext
@@ -80,7 +90,7 @@ makemessages: assets makedocsmessages
 	python -m kolibri manage makemessages -- -l en --ignore 'node_modules/*' --ignore 'kolibri/dist/*' --ignore 'docs/conf.py'
 
 compilemessages:
-	python -m kolibri manage compilemessages -- -l en > /dev/null
+	python -m kolibri manage compilemessages
 
 syncmessages: ensurecrowdinclient uploadmessages downloadmessages distributefrontendmessages
 
@@ -93,5 +103,30 @@ uploadmessages:
 downloadmessages:
 	java -jar crowdin-cli.jar download -b `git symbolic-ref HEAD | xargs basename`
 
-distributefrontendmessages:
-	python ./utils/distribute_frontend_messages.py
+dockerenvclean:
+	docker container prune -f
+	docker image prune -f
+
+dockerenvbuild: writeversion
+	docker image build -t learningequality/kolibri:$$(cat kolibri/VERSION) -t learningequality/kolibri:latest .
+
+dockerenvdist: writeversion
+	docker run -v $$PWD/dist:/kolibridist learningequality/kolibri:$$(cat kolibri/VERSION)
+
+BUMPVERSION_CMD = bumpversion --current-version `python -m kolibri --version` $(PART_INCREMENT) --allow-dirty -m "new version" --no-commit --list
+
+minor_increment:
+	$(eval PART_INCREMENT = minor)
+	$(BUMPVERSION_CMD)
+
+patch_increment:
+	$(eval PART_INCREMENT = patch)
+	$(BUMPVERSION_CMD)
+
+release_phase_increment:
+	$(eval PART_INCREMENT = release_phase)
+	$(BUMPVERSION_CMD)
+
+release_number_increment:
+	$(eval PART_INCREMENT = release_number)
+	$(BUMPVERSION_CMD)
