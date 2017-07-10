@@ -1,5 +1,5 @@
 {
 	"url": "http://127.0.0.1:8000/management",
-	"name": "Learn Page",
-	"description": "Logged out view of explore page with simple channel"
+	"name": "Management Page",
+	"description": "Initial view of Management page from clicking tab"
 }
