@@ -1,5 +1,5 @@
 {
-  "url": "http://localhost:8000/learn/#/learn/5b1e904335ab4dfda82e3e37735262c5",
+  "url": "http://localhost:8000/learn/#/66cef05505fa550b970e69c3623e82ba/recommended",
   "name": "Learn Page",
-  "description": "Logged out view of learn page with simple channel"
+  "description": "Basic Learn Page with Touchable Earth data"
 }
