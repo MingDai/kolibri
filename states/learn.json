@@ -1,5 +1,5 @@
 {
-	"url": "http://127.0.0.1:8000/learn",
+	"url": "/learn",
 	"name": "Learn Page",
 	"description": "Logged out view of explore page with simple channel",
   "username": "minglearner",
