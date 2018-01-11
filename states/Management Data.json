@@ -1,5 +1,5 @@
 {
-  "url": "http://localhost:8000/management/#/data",
+  "url": "management/#/data",
   "name": "Management Data",
   "description": "Management Page Data Tab"
 }
