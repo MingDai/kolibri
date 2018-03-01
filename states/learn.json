@@ -1,7 +1,7 @@
 {
-  "url": "learn/#/66cef05505fa550b970e69c3623e82ba/recommended",
-  "name": "Learn Page",
-  "description": "Basic Learn Page with Touchable Earth data",
-  "username": "mingowner",
-  "password": "mingadmin"
+	"url": "/learn",
+	"name": "Learn Page",
+	"description": "Logged out view of explore page with simple channel",
+  "username": "devowner",
+  "password": "admin123"
 }
