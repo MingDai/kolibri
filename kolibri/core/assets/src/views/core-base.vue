@@ -146,6 +146,5 @@
     right: 0
     bottom: 0
     padding-bottom: 40px
-    padding: 32px
-
+    padding: 100px
 </style>
